@@ -1,0 +1,29 @@
+"""
+SQLAlchemy engine, session factory, and declarative base.
+Uses SQLite by default (file-based, zero-config) but DATABASE_URL can point
+to any SQLAlchemy-supported database for production (e.g. Postgres).
+"""
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
+
+from app.core.config import get_settings
+
+settings = get_settings()
+
+connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+
+engine = create_engine(settings.database_url, connect_args=connect_args)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def get_db():
+    """FastAPI dependency that yields a DB session and ensures it's closed."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
